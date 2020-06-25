@@ -19,9 +19,10 @@ def filter_instances(project):
 def cli():
     """Shotty manages snapshots"""
 
+
 @cli.group('snapshots')
 def snapshots():
-    """Commnad for snapshots"""
+    """Command for snapshots"""
 
 @snapshots.command('list')
 @click.option('--project', default=None,
@@ -73,6 +74,21 @@ def list_volumes(project):
 def instances():
     """Commands for instances"""
 
+
+@instances.command('reboot')
+@click.option('--project', default=None,
+    help="Only reboot instances for project (tag Project:<name>)")
+def reboot_ec2s(project):
+    "Reboot instances"
+
+    instances = filter_instances(project)
+
+    for i in instances:
+        print("Rebooting{0}...".format(i.id))
+        i.reboot()
+    return
+
+
 @instances.command('snapshot',
     help="Create snapshots of all volumes")
 @click.option('--project', default=None,
@@ -83,9 +99,21 @@ def create_snapshots(project):
     instances = filter_instances(project)
 
     for i in instances:
+        print("Stopping {0}...".format(i.id))
+
+        i.stop()
+        i.wait_until_stopped()
+
         for v in i.volumes.all():
             print("Creating snapshot of {0}".format(v.id))
             v.create_snapshot(Description="Created by Snapshotalyzer 30000")
+
+        print("Starting {0}...".format(i.id))
+
+        i.start()
+        i.wait_until_running()
+
+    print("Job's done!")
 
     return
 
